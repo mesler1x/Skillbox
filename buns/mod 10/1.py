@@ -1,43 +1,40 @@
-import re
+import requests
+import json
 
-def is_valid_password(password):
-    if len(password) < 8:
-        return False
+ship_url = "https://swapi.dev/api/starships/?search=Millennium Falcon"
+response = requests.get(ship_url)
+data = response.json()
 
-    if re.findall(r'(\w)\1', password) is None:
-        return False
+ship_details_url = data['results'][0]['url']
+ship_response = requests.get(ship_details_url)
+ship_data = ship_response.json()
 
-    if re.search(r'\d', password) is None:
-        return False
+pilots_info = []
+for pilot_url in ship_data["pilots"]:
+    pilot_response = requests.get(pilot_url)
+    pilot_data = pilot_response.json()
+    homeworld_url = pilot_data["homeworld"]
 
-    special_chars = re.findall('[^a-zA-Z0-9]', password)
-    if len(set(special_chars)) < 3:
-        return False
+    homeworld_response = requests.get(homeworld_url)
+    homeworld_data = homeworld_response.json()
 
-    if re.search(r'[,\.!?]', password) is not None:
-        return False
+    pilot_info = {
+        "height": pilot_data["height"],
+        "homeworld": homeworld_data["name"],
+        "homeworld_url": pilot_data["homeworld"],
+        "mass": pilot_data["mass"],
+        "name": pilot_data["name"],
+    }
+    pilots_info.append(pilot_info)
 
-    return True
+info = {
+    "max_atmosphering_speed": ship_data["max_atmosphering_speed"],
+    "pilots": pilots_info,
+    "ship_name": ship_data["name"],
+    "starship_class": ship_data["starship_class"],
+}
 
-def test_is_valid_password():
-    """
-    >>> is_valid_password('rtG&3FG#Tr^e')
-    True
-    >>> is_valid_password('a^A1@*@1Aa')
-    True
-    >>> is_valid_password('oF^a1D@y5%e6')
-    True
-    >>> is_valid_password('enroi#$*rkdeR#$*092uwedchf34tguv394h')
-    True
-    >>> is_valid_password('пароль')
-    False
-    >>> is_valid_password('password')
-    False
-    >>> is_valid_password('qwerty')
-    False
-    >>> is_valid_password('lOngPa$$W0Rd')
-    False
-    """
-    pass
+print(json.dumps(info, indent=4))
 
-test_is_valid_password()
+with open("mesler.json", "w") as file:
+    json.dump(info, file, indent=4)
